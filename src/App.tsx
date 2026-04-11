@@ -14,6 +14,7 @@ import LoanAssistance from "./pages/LoanAssistance";
 import Notifications from "./pages/Notifications";
 import AdminPanel from "./pages/AdminPanel";
 import SettingsPage from "./pages/SettingsPage";
+import Gamification from "./pages/Gamification";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -33,6 +34,7 @@ const App = () => (
             <Route path="/chat" element={<AIMentor />} />
             <Route path="/applications" element={<Applications />} />
             <Route path="/loans" element={<LoanAssistance />} />
+            <Route path="/rewards" element={<Gamification />} />
             <Route path="/notifications" element={<Notifications />} />
             <Route path="/admin" element={<AdminPanel />} />
             <Route path="/settings" element={<SettingsPage />} />
