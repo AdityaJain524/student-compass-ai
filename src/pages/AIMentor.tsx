@@ -2,12 +2,16 @@ import { useState, useRef, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { MessageCircle, Send, Bot, User, Sparkles } from "lucide-react";
+import { MessageCircle, Send, Bot, User, Sparkles, AlertCircle } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import { toast } from "sonner";
 
 interface Message {
   role: "user" | "assistant";
   content: string;
 }
+
+const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
 
 const quickQuestions = [
   "What are the best universities for Computer Science?",
@@ -16,26 +20,106 @@ const quickQuestions = [
   "Help me write a Statement of Purpose",
 ];
 
-const mockResponses: Record<string, string> = {
-  default: "I'd be happy to help! As your AI mentor, I can assist with university selection, visa processes, loan options, and application preparation. What specific area would you like to explore?",
-  university: "For Computer Science, the top universities include:\n\n🏛 **MIT** - #1 globally, strong research focus\n🏛 **Stanford** - Silicon Valley connections\n🏛 **Carnegie Mellon** - Excellent for AI/ML\n🏛 **ETH Zurich** - Top European option, low tuition\n🏛 **University of Toronto** - Great for AI research\n\nWould you like me to check your admission chances for any of these?",
-  visa: "Here's a step-by-step guide for a US student visa (F-1):\n\n1. **Get I-20 form** from your university\n2. **Pay SEVIS fee** ($350)\n3. **Complete DS-160** application online\n4. **Schedule interview** at US Embassy\n5. **Prepare documents**: passport, I-20, financials, transcripts\n6. **Attend interview** and answer confidently\n\nProcessing typically takes 3-5 business days. Start at least 3 months before your program begins!",
-  loan: "Here are popular education loan options:\n\n💰 **SBI Scholar Loan** - Up to ₹1.5 Cr, 8.5% interest\n💰 **HDFC Credila** - Up to ₹45L, flexible repayment\n💰 **Prodigy Finance** - No collateral needed\n💰 **MPOWER** - For international students\n\nKey factors:\n- Interest rates: 8-12%\n- Moratorium period: Course + 6 months\n- Collateral: Required above ₹7.5L usually\n\nShall I check your loan eligibility?",
-  sop: "I'll help you craft a compelling SOP! Here's a structure:\n\n📝 **Paragraph 1**: Hook - Your motivation/story\n📝 **Paragraph 2**: Academic background & achievements\n📝 **Paragraph 3**: Professional experience\n📝 **Paragraph 4**: Why this program/university?\n📝 **Paragraph 5**: Future goals & how the program fits\n\n**Tips**:\n- Be specific, not generic\n- Show, don't tell\n- Keep it under 1000 words\n- Tailor for each university\n\nWould you like me to help draft one based on your profile?",
-};
+async function streamChat({
+  messages,
+  onDelta,
+  onDone,
+  onError,
+}: {
+  messages: Message[];
+  onDelta: (text: string) => void;
+  onDone: () => void;
+  onError: (msg: string) => void;
+}) {
+  const resp = await fetch(CHAT_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+    },
+    body: JSON.stringify({ messages }),
+  });
 
-const getResponse = (msg: string): string => {
-  const lower = msg.toLowerCase();
-  if (lower.includes("university") || lower.includes("computer science") || lower.includes("best")) return mockResponses.university;
-  if (lower.includes("visa") || lower.includes("apply")) return mockResponses.visa;
-  if (lower.includes("loan") || lower.includes("finance")) return mockResponses.loan;
-  if (lower.includes("sop") || lower.includes("statement")) return mockResponses.sop;
-  return mockResponses.default;
-};
+  if (!resp.ok) {
+    const body = await resp.json().catch(() => ({ error: "Unknown error" }));
+    if (resp.status === 429) {
+      onError("Rate limit reached. Please wait a moment and try again.");
+    } else if (resp.status === 402) {
+      onError("AI credits exhausted. Please add funds to continue.");
+    } else {
+      onError(body.error || "Something went wrong. Please try again.");
+    }
+    return;
+  }
+
+  if (!resp.body) {
+    onError("No response stream available");
+    return;
+  }
+
+  const reader = resp.body.getReader();
+  const decoder = new TextDecoder();
+  let textBuffer = "";
+  let streamDone = false;
+
+  while (!streamDone) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    textBuffer += decoder.decode(value, { stream: true });
+
+    let newlineIndex: number;
+    while ((newlineIndex = textBuffer.indexOf("\n")) !== -1) {
+      let line = textBuffer.slice(0, newlineIndex);
+      textBuffer = textBuffer.slice(newlineIndex + 1);
+
+      if (line.endsWith("\r")) line = line.slice(0, -1);
+      if (line.startsWith(":") || line.trim() === "") continue;
+      if (!line.startsWith("data: ")) continue;
+
+      const jsonStr = line.slice(6).trim();
+      if (jsonStr === "[DONE]") {
+        streamDone = true;
+        break;
+      }
+
+      try {
+        const parsed = JSON.parse(jsonStr);
+        const content = parsed.choices?.[0]?.delta?.content as string | undefined;
+        if (content) onDelta(content);
+      } catch {
+        textBuffer = line + "\n" + textBuffer;
+        break;
+      }
+    }
+  }
+
+  // Flush remaining
+  if (textBuffer.trim()) {
+    for (let raw of textBuffer.split("\n")) {
+      if (!raw) continue;
+      if (raw.endsWith("\r")) raw = raw.slice(0, -1);
+      if (raw.startsWith(":") || raw.trim() === "") continue;
+      if (!raw.startsWith("data: ")) continue;
+      const jsonStr = raw.slice(6).trim();
+      if (jsonStr === "[DONE]") continue;
+      try {
+        const parsed = JSON.parse(jsonStr);
+        const content = parsed.choices?.[0]?.delta?.content as string | undefined;
+        if (content) onDelta(content);
+      } catch { /* ignore */ }
+    }
+  }
+
+  onDone();
+}
 
 const AIMentor = () => {
   const [messages, setMessages] = useState<Message[]>([
-    { role: "assistant", content: "Hello! I'm your AI Study Abroad Mentor 🎓. I can help with university selection, visa guidance, loan options, SOP writing, and more. What would you like to know?" },
+    {
+      role: "assistant",
+      content:
+        "Hello! I'm your **AI Study Abroad Mentor** 🎓\n\nI can help with:\n- 🏛 University selection & course guidance\n- ✈️ Visa application processes\n- 💰 Education loans & scholarships\n- 📝 SOP writing assistance\n- 💼 Career planning\n\nWhat would you like to know?",
+    },
   ]);
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
@@ -45,17 +129,44 @@ const AIMentor = () => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const send = (text: string) => {
-    if (!text.trim()) return;
+  const send = async (text: string) => {
+    if (!text.trim() || isTyping) return;
     const userMsg: Message = { role: "user", content: text.trim() };
-    setMessages((prev) => [...prev, userMsg]);
+    const updatedMessages = [...messages, userMsg];
+    setMessages(updatedMessages);
     setInput("");
     setIsTyping(true);
 
-    setTimeout(() => {
-      setMessages((prev) => [...prev, { role: "assistant", content: getResponse(text) }]);
+    let assistantSoFar = "";
+
+    const upsertAssistant = (chunk: string) => {
+      assistantSoFar += chunk;
+      setMessages((prev) => {
+        const last = prev[prev.length - 1];
+        if (last?.role === "assistant" && prev.length > updatedMessages.length - 1) {
+          return prev.map((m, i) =>
+            i === prev.length - 1 ? { ...m, content: assistantSoFar } : m
+          );
+        }
+        return [...prev, { role: "assistant", content: assistantSoFar }];
+      });
+    };
+
+    try {
+      await streamChat({
+        messages: updatedMessages,
+        onDelta: (chunk) => upsertAssistant(chunk),
+        onDone: () => setIsTyping(false),
+        onError: (msg) => {
+          toast.error(msg);
+          setIsTyping(false);
+        },
+      });
+    } catch (e) {
+      console.error(e);
+      toast.error("Failed to connect to AI. Please try again.");
       setIsTyping(false);
-    }, 800 + Math.random() * 700);
+    }
   };
 
   return (
@@ -66,7 +177,7 @@ const AIMentor = () => {
         </div>
         <div>
           <h1 className="text-lg font-bold">AI Mentor</h1>
-          <p className="text-xs text-muted-foreground">Powered by AI • Always available</p>
+          <p className="text-xs text-muted-foreground">Powered by AI • Streaming responses</p>
         </div>
       </div>
 
@@ -80,12 +191,20 @@ const AIMentor = () => {
                   <Bot className="h-4 w-4 text-accent-foreground" />
                 </div>
               )}
-              <div className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm whitespace-pre-wrap ${
-                msg.role === "user"
-                  ? "gradient-primary text-primary-foreground rounded-br-md"
-                  : "bg-muted rounded-bl-md"
-              }`}>
-                {msg.content}
+              <div
+                className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm ${
+                  msg.role === "user"
+                    ? "gradient-primary text-primary-foreground rounded-br-md whitespace-pre-wrap"
+                    : "bg-muted rounded-bl-md"
+                }`}
+              >
+                {msg.role === "assistant" ? (
+                  <div className="prose prose-sm max-w-none dark:prose-invert [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
+                    <ReactMarkdown>{msg.content}</ReactMarkdown>
+                  </div>
+                ) : (
+                  msg.content
+                )}
               </div>
               {msg.role === "user" && (
                 <div className="h-7 w-7 rounded-lg bg-secondary flex items-center justify-center shrink-0 mt-1">
@@ -94,7 +213,7 @@ const AIMentor = () => {
               )}
             </div>
           ))}
-          {isTyping && (
+          {isTyping && messages[messages.length - 1]?.role !== "assistant" && (
             <div className="flex gap-3">
               <div className="h-7 w-7 rounded-lg gradient-accent flex items-center justify-center shrink-0">
                 <Bot className="h-4 w-4 text-accent-foreground" />
@@ -120,7 +239,8 @@ const AIMentor = () => {
                 onClick={() => send(q)}
                 className="text-xs px-3 py-1.5 rounded-full border bg-card hover:bg-muted transition-colors text-muted-foreground"
               >
-                <Sparkles className="inline h-3 w-3 mr-1" />{q}
+                <Sparkles className="inline h-3 w-3 mr-1" />
+                {q}
               </button>
             ))}
           </div>
@@ -129,7 +249,10 @@ const AIMentor = () => {
         {/* Input */}
         <div className="p-3 border-t">
           <form
-            onSubmit={(e) => { e.preventDefault(); send(input); }}
+            onSubmit={(e) => {
+              e.preventDefault();
+              send(input);
+            }}
             className="flex gap-2"
           >
             <Input
@@ -139,7 +262,12 @@ const AIMentor = () => {
               className="flex-1"
               disabled={isTyping}
             />
-            <Button type="submit" size="icon" className="gradient-primary border-0 shrink-0" disabled={isTyping || !input.trim()}>
+            <Button
+              type="submit"
+              size="icon"
+              className="gradient-primary border-0 shrink-0"
+              disabled={isTyping || !input.trim()}
+            >
               <Send className="h-4 w-4 text-primary-foreground" />
             </Button>
           </form>
