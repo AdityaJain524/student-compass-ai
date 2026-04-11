@@ -8,6 +8,7 @@ import {
   Banknote,
   Bell,
   Settings,
+  Trophy,
   Shield,
   LogOut,
 } from "lucide-react";
@@ -34,6 +35,7 @@ const mainItems = [
   { title: "AI Mentor", url: "/chat", icon: MessageCircle },
   { title: "Applications", url: "/applications", icon: FileText },
   { title: "Loan Assistance", url: "/loans", icon: Banknote },
+  { title: "Rewards", url: "/rewards", icon: Trophy },
   { title: "Notifications", url: "/notifications", icon: Bell },
 ];
 
