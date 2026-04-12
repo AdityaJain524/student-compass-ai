@@ -14,7 +14,341 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      applications: {
+        Row: {
+          course: string | null
+          created_at: string
+          deadline: string | null
+          id: string
+          notes: string | null
+          status: string
+          university_id: string | null
+          university_name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          course?: string | null
+          created_at?: string
+          deadline?: string | null
+          id?: string
+          notes?: string | null
+          status?: string
+          university_id?: string | null
+          university_name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          course?: string | null
+          created_at?: string
+          deadline?: string | null
+          id?: string
+          notes?: string | null
+          status?: string
+          university_id?: string | null
+          university_name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "applications_university_id_fkey"
+            columns: ["university_id"]
+            isOneToOne: false
+            referencedRelation: "universities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_history: {
+        Row: {
+          content: string
+          conversation_id: string
+          created_at: string
+          id: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          conversation_id?: string
+          created_at?: string
+          id?: string
+          role: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          conversation_id?: string
+          created_at?: string
+          id?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      gamification: {
+        Row: {
+          badges: string[] | null
+          created_at: string
+          id: string
+          last_login_date: string | null
+          level: number
+          login_streak: number
+          points: number
+          referral_code: string | null
+          referrals_count: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          badges?: string[] | null
+          created_at?: string
+          id?: string
+          last_login_date?: string | null
+          level?: number
+          login_streak?: number
+          points?: number
+          referral_code?: string | null
+          referrals_count?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          badges?: string[] | null
+          created_at?: string
+          id?: string
+          last_login_date?: string | null
+          level?: number
+          login_streak?: number
+          points?: number
+          referral_code?: string | null
+          referrals_count?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      loans: {
+        Row: {
+          amount: number
+          bank_name: string
+          collateral_type: string | null
+          created_at: string
+          documents_submitted: string[] | null
+          emi: number | null
+          id: string
+          interest_rate: number | null
+          notes: string | null
+          status: string
+          tenure_months: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          bank_name: string
+          collateral_type?: string | null
+          created_at?: string
+          documents_submitted?: string[] | null
+          emi?: number | null
+          id?: string
+          interest_rate?: number | null
+          notes?: string | null
+          status?: string
+          tenure_months?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          bank_name?: string
+          collateral_type?: string | null
+          created_at?: string
+          documents_submitted?: string[] | null
+          emi?: number | null
+          id?: string
+          interest_rate?: number | null
+          notes?: string | null
+          status?: string
+          tenure_months?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      notifications: {
+        Row: {
+          created_at: string
+          id: string
+          link: string | null
+          message: string
+          read: boolean
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          link?: string | null
+          message: string
+          read?: boolean
+          title: string
+          type?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          link?: string | null
+          message?: string
+          read?: boolean
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          academic_history: string | null
+          avatar_url: string | null
+          budget_max: number | null
+          budget_min: number | null
+          created_at: string
+          display_name: string | null
+          email: string | null
+          gpa: number | null
+          id: string
+          interests: string[] | null
+          preferred_countries: string[] | null
+          test_scores: Json | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          academic_history?: string | null
+          avatar_url?: string | null
+          budget_max?: number | null
+          budget_min?: number | null
+          created_at?: string
+          display_name?: string | null
+          email?: string | null
+          gpa?: number | null
+          id?: string
+          interests?: string[] | null
+          preferred_countries?: string[] | null
+          test_scores?: Json | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          academic_history?: string | null
+          avatar_url?: string | null
+          budget_max?: number | null
+          budget_min?: number | null
+          created_at?: string
+          display_name?: string | null
+          email?: string | null
+          gpa?: number | null
+          id?: string
+          interests?: string[] | null
+          preferred_countries?: string[] | null
+          test_scores?: Json | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      sop_drafts: {
+        Row: {
+          content: string
+          course: string | null
+          created_at: string
+          id: string
+          prompt_context: Json | null
+          university_name: string | null
+          updated_at: string
+          user_id: string
+          version: number
+        }
+        Insert: {
+          content?: string
+          course?: string | null
+          created_at?: string
+          id?: string
+          prompt_context?: Json | null
+          university_name?: string | null
+          updated_at?: string
+          user_id: string
+          version?: number
+        }
+        Update: {
+          content?: string
+          course?: string | null
+          created_at?: string
+          id?: string
+          prompt_context?: Json | null
+          university_name?: string | null
+          updated_at?: string
+          user_id?: string
+          version?: number
+        }
+        Relationships: []
+      }
+      universities: {
+        Row: {
+          acceptance_rate: number | null
+          city: string | null
+          country: string
+          courses: string[] | null
+          created_at: string
+          description: string | null
+          id: string
+          image_url: string | null
+          name: string
+          ranking: number | null
+          requirements: Json | null
+          tuition_max: number | null
+          tuition_min: number | null
+          website: string | null
+        }
+        Insert: {
+          acceptance_rate?: number | null
+          city?: string | null
+          country: string
+          courses?: string[] | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          name: string
+          ranking?: number | null
+          requirements?: Json | null
+          tuition_max?: number | null
+          tuition_min?: number | null
+          website?: string | null
+        }
+        Update: {
+          acceptance_rate?: number | null
+          city?: string | null
+          country?: string
+          courses?: string[] | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          name?: string
+          ranking?: number | null
+          requirements?: Json | null
+          tuition_max?: number | null
+          tuition_min?: number | null
+          website?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
