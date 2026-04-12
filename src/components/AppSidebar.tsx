@@ -11,9 +11,11 @@ import {
   Trophy,
   Shield,
   LogOut,
+  PenTool,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 import {
   Sidebar,
   SidebarContent,
@@ -33,6 +35,7 @@ const mainItems = [
   { title: "Admission Predictor", url: "/admission", icon: GraduationCap },
   { title: "ROI Calculator", url: "/roi", icon: Calculator },
   { title: "AI Mentor", url: "/chat", icon: MessageCircle },
+  { title: "SOP Generator", url: "/sop", icon: PenTool },
   { title: "Applications", url: "/applications", icon: FileText },
   { title: "Loan Assistance", url: "/loans", icon: Banknote },
   { title: "Rewards", url: "/rewards", icon: Trophy },
@@ -48,14 +51,20 @@ export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const location = useLocation();
+  const navigate = useNavigate();
+  const { signOut } = useAuth();
 
   const isActive = (path: string) =>
     path === "/" ? location.pathname === "/" : location.pathname.startsWith(path);
 
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/auth");
+  };
+
   return (
     <Sidebar collapsible="icon" className="gradient-sidebar border-r-0">
       <SidebarContent>
-        {/* Logo */}
         <div className="flex items-center gap-3 px-4 py-5">
           <div className="flex h-9 w-9 items-center justify-center rounded-lg gradient-primary">
             <GraduationCap className="h-5 w-5 text-sidebar-primary-foreground" />
@@ -76,17 +85,8 @@ export function AppSidebar() {
             <SidebarMenu>
               {mainItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={isActive(item.url)}
-                    tooltip={item.title}
-                  >
-                    <NavLink
-                      to={item.url}
-                      end={item.url === "/"}
-                      className="transition-colors"
-                      activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
-                    >
+                  <SidebarMenuButton asChild isActive={isActive(item.url)} tooltip={item.title}>
+                    <NavLink to={item.url} end={item.url === "/"} className="transition-colors" activeClassName="bg-sidebar-accent text-sidebar-primary font-medium">
                       <item.icon className="h-4 w-4" />
                       {!collapsed && <span>{item.title}</span>}
                     </NavLink>
@@ -105,16 +105,8 @@ export function AppSidebar() {
             <SidebarMenu>
               {adminItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={isActive(item.url)}
-                    tooltip={item.title}
-                  >
-                    <NavLink
-                      to={item.url}
-                      className="transition-colors"
-                      activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
-                    >
+                  <SidebarMenuButton asChild isActive={isActive(item.url)} tooltip={item.title}>
+                    <NavLink to={item.url} className="transition-colors" activeClassName="bg-sidebar-accent text-sidebar-primary font-medium">
                       <item.icon className="h-4 w-4" />
                       {!collapsed && <span>{item.title}</span>}
                     </NavLink>
@@ -129,7 +121,7 @@ export function AppSidebar() {
       <SidebarFooter>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton tooltip="Sign Out">
+            <SidebarMenuButton tooltip="Sign Out" onClick={handleSignOut}>
               <LogOut className="h-4 w-4" />
               {!collapsed && <span>Sign Out</span>}
             </SidebarMenuButton>
