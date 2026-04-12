@@ -1,45 +1,81 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Bell, Calendar, GraduationCap, Banknote, FileText, Check } from "lucide-react";
-import { useState } from "react";
+import { Bell, Calendar, GraduationCap, Banknote, FileText, Check, Trophy, Info } from "lucide-react";
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
-interface Notification {
-  id: number;
-  title: string;
-  message: string;
-  type: "deadline" | "recommendation" | "loan" | "application";
-  time: string;
-  read: boolean;
-}
-
-const initialNotifs: Notification[] = [
-  { id: 1, title: "Application Deadline", message: "MIT application deadline is in 5 days", type: "deadline", time: "2 hours ago", read: false },
-  { id: 2, title: "New Recommendation", message: "Based on your profile, check out ETH Zurich's MS program", type: "recommendation", time: "5 hours ago", read: false },
-  { id: 3, title: "Loan Update", message: "Your SBI Scholar Loan pre-approval is ready", type: "loan", time: "1 day ago", read: false },
-  { id: 4, title: "Application Update", message: "Oxford has moved your application to interview stage", type: "application", time: "2 days ago", read: true },
-  { id: 5, title: "Deadline Reminder", message: "TU Munich application due in 2 weeks", type: "deadline", time: "3 days ago", read: true },
-];
-
-const typeIcons = {
+const typeIcons: Record<string, any> = {
   deadline: Calendar,
   recommendation: GraduationCap,
   loan: Banknote,
-  application: FileText,
+  info: Info,
+  achievement: Trophy,
 };
 
-const typeColors = {
+const typeColors: Record<string, string> = {
   deadline: "text-warning",
   recommendation: "text-primary",
   loan: "text-success",
-  application: "text-info",
+  info: "text-info",
+  achievement: "text-primary",
 };
 
+interface Notification {
+  id: string;
+  title: string;
+  message: string;
+  type: string;
+  read: boolean;
+  created_at: string;
+}
+
 const Notifications = () => {
-  const [notifs, setNotifs] = useState(initialNotifs);
+  const { user } = useAuth();
+  const [notifs, setNotifs] = useState<Notification[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchNotifs = async () => {
+    if (!user) return;
+    const { data } = await supabase
+      .from("notifications")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(50);
+    if (data) setNotifs(data);
+    setLoading(false);
+  };
+
+  useEffect(() => { fetchNotifs(); }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+    const channel = supabase
+      .channel("notif-changes")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` }, () => fetchNotifs())
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [user]);
+
   const unread = notifs.filter((n) => !n.read).length;
 
-  const markAllRead = () => setNotifs(notifs.map((n) => ({ ...n, read: true })));
+  const markAllRead = async () => {
+    if (!user) return;
+    await supabase.from("notifications").update({ read: true }).eq("user_id", user.id).eq("read", false);
+    fetchNotifs();
+  };
+
+  const timeAgo = (dateStr: string) => {
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 60) return `${mins}m ago`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return `${hours}h ago`;
+    return `${Math.floor(hours / 24)}d ago`;
+  };
+
+  if (loading) return <div className="flex justify-center py-20"><div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" /></div>;
 
   return (
     <div className="space-y-6 max-w-3xl">
@@ -57,28 +93,35 @@ const Notifications = () => {
         )}
       </div>
 
-      <div className="space-y-3">
-        {notifs.map((n) => {
-          const Icon = typeIcons[n.type];
-          return (
-            <Card key={n.id} className={`p-4 shadow-card transition-all cursor-pointer hover:shadow-elevated ${!n.read ? "border-l-4 border-l-primary" : "opacity-70"}`}>
-              <div className="flex gap-3">
-                <div className={`h-9 w-9 rounded-xl bg-muted flex items-center justify-center shrink-0 ${typeColors[n.type]}`}>
-                  <Icon className="h-4 w-4" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-sm font-semibold">{n.title}</h3>
-                    {!n.read && <span className="h-2 w-2 rounded-full bg-primary" />}
+      {notifs.length === 0 ? (
+        <Card className="p-8 text-center text-muted-foreground shadow-card">
+          <Bell className="h-12 w-12 mx-auto mb-3 opacity-30" />
+          <p>No notifications yet.</p>
+        </Card>
+      ) : (
+        <div className="space-y-3">
+          {notifs.map((n) => {
+            const Icon = typeIcons[n.type] || Info;
+            return (
+              <Card key={n.id} className={`p-4 shadow-card transition-all cursor-pointer hover:shadow-elevated ${!n.read ? "border-l-4 border-l-primary" : "opacity-70"}`}>
+                <div className="flex gap-3">
+                  <div className={`h-9 w-9 rounded-xl bg-muted flex items-center justify-center shrink-0 ${typeColors[n.type] || "text-muted-foreground"}`}>
+                    <Icon className="h-4 w-4" />
                   </div>
-                  <p className="text-sm text-muted-foreground mt-0.5">{n.message}</p>
-                  <p className="text-xs text-muted-foreground mt-1">{n.time}</p>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-sm font-semibold">{n.title}</h3>
+                      {!n.read && <span className="h-2 w-2 rounded-full bg-primary" />}
+                    </div>
+                    <p className="text-sm text-muted-foreground mt-0.5">{n.message}</p>
+                    <p className="text-xs text-muted-foreground mt-1">{timeAgo(n.created_at)}</p>
+                  </div>
                 </div>
-              </div>
-            </Card>
-          );
-        })}
-      </div>
+              </Card>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 };
