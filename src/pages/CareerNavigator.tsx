@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,117 +7,72 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Compass, MapPin, DollarSign, BookOpen, Sparkles, X, GraduationCap, Users, Globe, Award, ExternalLink } from "lucide-react";
+import { Compass, MapPin, DollarSign, BookOpen, Sparkles, GraduationCap, Users, Globe, Award, ExternalLink, Loader2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import type { Tables } from "@/integrations/supabase/types";
 
-interface UniversityResult {
-  id: string;
-  country: string;
-  university: string;
-  course: string;
-  match: number;
-  tuition: string;
-  flag: string;
-  ranking: number;
-  acceptance: string;
-  duration: string;
-  livingCost: string;
-  avgSalary: string;
-  description: string;
-  highlights: string[];
-  requirements: string[];
-}
+type University = Tables<"universities">;
 
-const mockResults: UniversityResult[] = [
-  {
-    id: "mit",
-    country: "USA",
-    university: "Massachusetts Institute of Technology",
-    course: "MS Computer Science",
-    match: 95,
-    tuition: "$55,000/yr",
-    flag: "🇺🇸",
-    ranking: 1,
-    acceptance: "3.5%",
-    duration: "2 years",
-    livingCost: "$2,500/mo",
-    avgSalary: "$135,000/yr",
-    description: "MIT's EECS department is consistently ranked #1 globally. The program offers unparalleled research opportunities in AI, systems, and theory with access to world-class labs like CSAIL.",
-    highlights: ["#1 CS Program Globally", "CSAIL Research Lab", "Strong Industry Connections", "Optional Thesis Track"],
-    requirements: ["GPA: 3.8+", "GRE: 330+", "TOEFL: 100+", "Research experience preferred"],
-  },
-  {
-    id: "oxford",
-    country: "UK",
-    university: "University of Oxford",
-    course: "MS Data Science",
-    match: 88,
-    tuition: "£32,000/yr",
-    flag: "🇬🇧",
-    ranking: 3,
-    acceptance: "8%",
-    duration: "1 year",
-    livingCost: "£1,400/mo",
-    avgSalary: "£65,000/yr",
-    description: "Oxford's MSc in Data Science combines statistics, machine learning, and computer science. The intensive 1-year program includes a dissertation and access to Oxford's renowned research network.",
-    highlights: ["1-Year Intensive Program", "Tutorial-Based Learning", "Oxford Research Network", "City of Dreaming Spires"],
-    requirements: ["GPA: 3.7+", "IELTS: 7.5+", "Strong math background", "Programming proficiency"],
-  },
-  {
-    id: "uoft",
-    country: "Canada",
-    university: "University of Toronto",
-    course: "MS Artificial Intelligence",
-    match: 85,
-    tuition: "CAD 45,000/yr",
-    flag: "🇨🇦",
-    ranking: 10,
-    acceptance: "12%",
-    duration: "2 years",
-    livingCost: "CAD 1,800/mo",
-    avgSalary: "CAD 95,000/yr",
-    description: "UofT is home to the Vector Institute, a global leader in AI research. The program offers deep learning, NLP, and robotics specializations with industry partnerships.",
-    highlights: ["Vector Institute Partnership", "Pioneer of Deep Learning", "Post-Graduation Work Permit", "Multicultural City"],
-    requirements: ["GPA: 3.5+", "GRE: 315+", "IELTS: 7.0+", "CS background required"],
-  },
-  {
-    id: "tum",
-    country: "Germany",
-    university: "Technical University of Munich",
-    course: "MS Informatics",
-    match: 82,
-    tuition: "€3,000/yr",
-    flag: "🇩🇪",
-    ranking: 15,
-    acceptance: "20%",
-    duration: "2 years",
-    livingCost: "€1,000/mo",
-    avgSalary: "€60,000/yr",
-    description: "TU Munich offers world-class education at minimal tuition fees. The Informatics program covers software engineering, AI, and data science with strong industry ties to BMW, Siemens, and SAP.",
-    highlights: ["Near-Free Tuition", "Strong Industry Ties", "Research Excellence", "Heart of Europe"],
-    requirements: ["GPA: 3.3+", "IELTS: 6.5+ or German B2", "CS prerequisites", "Motivation letter"],
-  },
-  {
-    id: "unsw",
-    country: "Australia",
-    university: "University of New South Wales",
-    course: "MS Information Technology",
-    match: 78,
-    tuition: "AUD 42,000/yr",
-    flag: "🇦🇺",
-    ranking: 25,
-    acceptance: "30%",
-    duration: "2 years",
-    livingCost: "AUD 2,000/mo",
-    avgSalary: "AUD 85,000/yr",
-    description: "UNSW Sydney offers a flexible IT program with specializations in AI, cybersecurity, and data science. Students benefit from co-op programs and Sydney's thriving tech ecosystem.",
-    highlights: ["Co-op Work Program", "Sydney Tech Hub", "Post-Study Work Visa (2-4 yrs)", "Diverse Campus"],
-    requirements: ["GPA: 3.0+", "IELTS: 6.5+", "Any bachelor's degree", "Statement of purpose"],
-  },
-];
+const countryFlags: Record<string, string> = {
+  "USA": "🇺🇸", "UK": "🇬🇧", "Canada": "🇨🇦", "Germany": "🇩🇪", "Australia": "🇦🇺",
+  "France": "🇫🇷", "Japan": "🇯🇵", "Singapore": "🇸🇬", "Netherlands": "🇳🇱", "Sweden": "🇸🇪",
+};
 
 const CareerNavigator = () => {
   const [showResults, setShowResults] = useState(false);
-  const [selectedUni, setSelectedUni] = useState<UniversityResult | null>(null);
+  const [selectedUni, setSelectedUni] = useState<University | null>(null);
+  const [results, setResults] = useState<University[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [field, setField] = useState("");
+  const [country, setCountry] = useState("");
+  const [gpa, setGpa] = useState("");
+  const [budget, setBudget] = useState("");
+
+  const handleSearch = async () => {
+    setLoading(true);
+    setShowResults(true);
+
+    let query = supabase.from("universities").select("*");
+
+    if (country && country !== "any") {
+      query = query.ilike("country", country);
+    }
+    if (budget) {
+      query = query.lte("tuition_min", Number(budget));
+    }
+
+    const { data, error } = await query.order("ranking", { ascending: true, nullsFirst: false });
+
+    if (!error && data) {
+      // Filter by field/course if selected
+      let filtered = data;
+      if (field) {
+        filtered = data.filter((u) =>
+          u.courses?.some((c) => c.toLowerCase().includes(field.toLowerCase())) || true
+        );
+      }
+      setResults(filtered);
+    }
+    setLoading(false);
+  };
+
+  const getReqs = (uni: University) => {
+    const r = uni.requirements as Record<string, any> | null;
+    if (!r) return [];
+    const items: string[] = [];
+    if (r.min_gpa) items.push(`GPA: ${r.min_gpa}+`);
+    if (r.ielts) items.push(`IELTS: ${r.ielts}+`);
+    if (r.toefl) items.push(`TOEFL: ${r.toefl}+`);
+    if (r.gre) items.push(`GRE: ${r.gre}+`);
+    if (r.extras) items.push(...(Array.isArray(r.extras) ? r.extras : [r.extras]));
+    return items;
+  };
+
+  const formatTuition = (uni: University) => {
+    if (uni.tuition_min && uni.tuition_max) return `$${(uni.tuition_min / 1000).toFixed(0)}k–$${(uni.tuition_max / 1000).toFixed(0)}k/yr`;
+    if (uni.tuition_min) return `$${(uni.tuition_min / 1000).toFixed(0)}k/yr`;
+    return "N/A";
+  };
 
   return (
     <div className="space-y-6 max-w-5xl">
@@ -126,7 +81,7 @@ const CareerNavigator = () => {
           <Compass className="h-6 w-6 text-primary" /> AI Career Navigator
         </h1>
         <p className="text-muted-foreground text-sm mt-1">
-          Tell us about yourself and get personalized university & course recommendations.
+          Search universities from our database and get personalized recommendations.
         </p>
       </div>
 
@@ -134,12 +89,12 @@ const CareerNavigator = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           <div className="space-y-2">
             <Label>Field of Interest</Label>
-            <Select>
+            <Select value={field} onValueChange={setField}>
               <SelectTrigger><SelectValue placeholder="Select field" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="cs">Computer Science</SelectItem>
+                <SelectItem value="computer science">Computer Science</SelectItem>
                 <SelectItem value="business">Business/MBA</SelectItem>
-                <SelectItem value="data">Data Science</SelectItem>
+                <SelectItem value="data science">Data Science</SelectItem>
                 <SelectItem value="engineering">Engineering</SelectItem>
                 <SelectItem value="medicine">Medicine</SelectItem>
               </SelectContent>
@@ -147,59 +102,66 @@ const CareerNavigator = () => {
           </div>
           <div className="space-y-2">
             <Label>Preferred Country</Label>
-            <Select>
+            <Select value={country} onValueChange={setCountry}>
               <SelectTrigger><SelectValue placeholder="Any country" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="any">Any Country</SelectItem>
-                <SelectItem value="usa">USA</SelectItem>
-                <SelectItem value="uk">UK</SelectItem>
-                <SelectItem value="canada">Canada</SelectItem>
-                <SelectItem value="germany">Germany</SelectItem>
-                <SelectItem value="australia">Australia</SelectItem>
+                <SelectItem value="USA">USA</SelectItem>
+                <SelectItem value="UK">UK</SelectItem>
+                <SelectItem value="Canada">Canada</SelectItem>
+                <SelectItem value="Germany">Germany</SelectItem>
+                <SelectItem value="Australia">Australia</SelectItem>
               </SelectContent>
             </Select>
           </div>
           <div className="space-y-2">
             <Label>Current GPA (out of 4.0)</Label>
-            <Input type="number" placeholder="3.5" step="0.1" min="0" max="4" />
+            <Input type="number" placeholder="3.5" step="0.1" min="0" max="4" value={gpa} onChange={(e) => setGpa(e.target.value)} />
           </div>
           <div className="space-y-2">
             <Label>Annual Budget (USD)</Label>
-            <Input type="number" placeholder="50000" />
+            <Input type="number" placeholder="50000" value={budget} onChange={(e) => setBudget(e.target.value)} />
           </div>
         </div>
-        <Button className="mt-6 gradient-primary border-0 text-primary-foreground" onClick={() => setShowResults(true)}>
-          <Sparkles className="mr-2 h-4 w-4" /> Get AI Recommendations
+        <Button className="mt-6 gradient-primary border-0 text-primary-foreground" onClick={handleSearch} disabled={loading}>
+          {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+          Get AI Recommendations
         </Button>
       </Card>
 
       {showResults && (
         <div className="space-y-4">
-          <h2 className="text-lg font-semibold">🎯 Top Recommendations</h2>
-          <div className="grid gap-4">
-            {mockResults.map((r) => (
-              <Card key={r.id} className="p-5 shadow-card hover:shadow-elevated transition-shadow">
-                <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-                  <div className="text-3xl">{r.flag}</div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="font-semibold">{r.university}</h3>
-                      <Badge variant="secondary" className="text-xs">{r.match}% match</Badge>
+          <h2 className="text-lg font-semibold">🎯 Top Recommendations ({results.length} found)</h2>
+          {loading ? (
+            <div className="flex justify-center py-8"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+          ) : results.length === 0 ? (
+            <Card className="p-8 text-center text-muted-foreground">No universities found matching your criteria. Try broadening your search.</Card>
+          ) : (
+            <div className="grid gap-4">
+              {results.map((r) => (
+                <Card key={r.id} className="p-5 shadow-card hover:shadow-elevated transition-shadow">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                    <div className="text-3xl">{countryFlags[r.country] || "🏫"}</div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className="font-semibold">{r.name}</h3>
+                        {r.ranking && <Badge variant="secondary" className="text-xs">#{r.ranking}</Badge>}
+                      </div>
+                      <p className="text-sm text-muted-foreground mt-0.5">{r.courses?.slice(0, 2).join(", ") || "Multiple programs"}</p>
+                      <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
+                        <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{r.city}, {r.country}</span>
+                        <span className="flex items-center gap-1"><DollarSign className="h-3 w-3" />{formatTuition(r)}</span>
+                        {r.acceptance_rate && <span className="flex items-center gap-1"><Users className="h-3 w-3" />{r.acceptance_rate}% acceptance</span>}
+                      </div>
                     </div>
-                    <p className="text-sm text-muted-foreground mt-0.5">{r.course}</p>
-                    <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
-                      <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{r.country}</span>
-                      <span className="flex items-center gap-1"><DollarSign className="h-3 w-3" />{r.tuition}</span>
-                      <span className="flex items-center gap-1"><BookOpen className="h-3 w-3" />{r.duration}</span>
-                    </div>
+                    <Button size="sm" variant="outline" onClick={() => setSelectedUni(r)}>
+                      View Details
+                    </Button>
                   </div>
-                  <Button size="sm" variant="outline" onClick={() => setSelectedUni(r)}>
-                    View Details
-                  </Button>
-                </div>
-              </Card>
-            ))}
-          </div>
+                </Card>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -210,10 +172,10 @@ const CareerNavigator = () => {
             <>
               <DialogHeader>
                 <div className="flex items-center gap-3">
-                  <span className="text-4xl">{selectedUni.flag}</span>
+                  <span className="text-4xl">{countryFlags[selectedUni.country] || "🏫"}</span>
                   <div>
-                    <DialogTitle className="text-xl">{selectedUni.university}</DialogTitle>
-                    <p className="text-sm text-muted-foreground mt-1">{selectedUni.course}</p>
+                    <DialogTitle className="text-xl">{selectedUni.name}</DialogTitle>
+                    <p className="text-sm text-muted-foreground mt-1">{selectedUni.city}, {selectedUni.country}</p>
                   </div>
                 </div>
               </DialogHeader>
@@ -226,13 +188,13 @@ const CareerNavigator = () => {
                 </TabsList>
 
                 <TabsContent value="overview" className="space-y-4 mt-4">
-                  <p className="text-sm text-muted-foreground leading-relaxed">{selectedUni.description}</p>
+                  <p className="text-sm text-muted-foreground leading-relaxed">{selectedUni.description || "No description available."}</p>
 
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     {[
-                      { label: "World Ranking", value: `#${selectedUni.ranking}`, icon: Award },
-                      { label: "Acceptance Rate", value: selectedUni.acceptance, icon: Users },
-                      { label: "Duration", value: selectedUni.duration, icon: BookOpen },
+                      { label: "World Ranking", value: selectedUni.ranking ? `#${selectedUni.ranking}` : "N/A", icon: Award },
+                      { label: "Acceptance Rate", value: selectedUni.acceptance_rate ? `${selectedUni.acceptance_rate}%` : "N/A", icon: Users },
+                      { label: "Programs", value: `${selectedUni.courses?.length || 0}`, icon: BookOpen },
                       { label: "Country", value: selectedUni.country, icon: Globe },
                     ].map((stat) => (
                       <Card key={stat.label} className="p-3 text-center">
@@ -243,38 +205,48 @@ const CareerNavigator = () => {
                     ))}
                   </div>
 
-                  <div>
-                    <h4 className="text-sm font-semibold mb-2">Highlights</h4>
-                    <div className="flex flex-wrap gap-2">
-                      {selectedUni.highlights.map((h) => (
-                        <Badge key={h} variant="secondary" className="text-xs">{h}</Badge>
-                      ))}
+                  {selectedUni.courses && selectedUni.courses.length > 0 && (
+                    <div>
+                      <h4 className="text-sm font-semibold mb-2">Available Programs</h4>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedUni.courses.map((c) => (
+                          <Badge key={c} variant="secondary" className="text-xs">{c}</Badge>
+                        ))}
+                      </div>
                     </div>
-                  </div>
+                  )}
+
+                  {selectedUni.website && (
+                    <Button variant="outline" size="sm" asChild>
+                      <a href={selectedUni.website} target="_blank" rel="noopener noreferrer">
+                        <ExternalLink className="mr-2 h-3 w-3" /> Visit Website
+                      </a>
+                    </Button>
+                  )}
                 </TabsContent>
 
                 <TabsContent value="requirements" className="space-y-4 mt-4">
                   <h4 className="text-sm font-semibold">Admission Requirements</h4>
-                  <div className="space-y-2">
-                    {selectedUni.requirements.map((req) => (
-                      <div key={req} className="flex items-center gap-2 text-sm p-2 rounded-lg bg-muted/50">
-                        <GraduationCap className="h-4 w-4 text-primary shrink-0" />
-                        {req}
-                      </div>
-                    ))}
-                  </div>
-                  <Button className="w-full gradient-primary border-0 text-primary-foreground mt-4" size="sm">
-                    Check My Admission Chances
-                  </Button>
+                  {getReqs(selectedUni).length > 0 ? (
+                    <div className="space-y-2">
+                      {getReqs(selectedUni).map((req) => (
+                        <div key={req} className="flex items-center gap-2 text-sm p-2 rounded-lg bg-muted/50">
+                          <GraduationCap className="h-4 w-4 text-primary shrink-0" />
+                          {req}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No specific requirements listed.</p>
+                  )}
                 </TabsContent>
 
                 <TabsContent value="finances" className="space-y-4 mt-4">
                   <div className="space-y-3">
                     {[
-                      { label: "Annual Tuition", value: selectedUni.tuition },
-                      { label: "Monthly Living Cost", value: selectedUni.livingCost },
-                      { label: "Average Salary After Graduation", value: selectedUni.avgSalary },
-                      { label: "Match Score", value: `${selectedUni.match}%` },
+                      { label: "Tuition Range", value: formatTuition(selectedUni) },
+                      { label: "Acceptance Rate", value: selectedUni.acceptance_rate ? `${selectedUni.acceptance_rate}%` : "N/A" },
+                      { label: "World Ranking", value: selectedUni.ranking ? `#${selectedUni.ranking}` : "N/A" },
                     ].map((item) => (
                       <div key={item.label} className="flex items-center justify-between p-3 rounded-xl bg-muted/50">
                         <span className="text-sm">{item.label}</span>
@@ -282,8 +254,8 @@ const CareerNavigator = () => {
                       </div>
                     ))}
                   </div>
-                  <Button variant="outline" className="w-full" size="sm">
-                    <ExternalLink className="mr-2 h-3 w-3" /> Calculate Full ROI
+                  <Button variant="outline" className="w-full" size="sm" asChild>
+                    <a href="/roi"><ExternalLink className="mr-2 h-3 w-3" /> Calculate Full ROI</a>
                   </Button>
                 </TabsContent>
               </Tabs>
