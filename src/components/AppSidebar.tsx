@@ -12,6 +12,8 @@ import {
   Shield,
   LogOut,
   PenTool,
+  Calendar,
+  Sparkles,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -36,6 +38,8 @@ const mainItems = [
   { title: "ROI Calculator", url: "/roi", icon: Calculator },
   { title: "AI Mentor", url: "/chat", icon: MessageCircle },
   { title: "SOP Generator", url: "/sop", icon: PenTool },
+  { title: "Timeline", url: "/timeline", icon: Calendar },
+  { title: "AI Content", url: "/ai-content", icon: Sparkles },
   { title: "Applications", url: "/applications", icon: FileText },
   { title: "Loan Assistance", url: "/loans", icon: Banknote },
   { title: "Rewards", url: "/rewards", icon: Trophy },
