@@ -2,3 +2,9 @@ project_id = "hobtsbcuhfrkfxudjuep"
 
 [functions.chat]
 verify_jwt = false
+
+[functions.generate-timeline]
+verify_jwt = false
+
+[functions.generate-content]
+verify_jwt = false

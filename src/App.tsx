@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import { AppLayout } from "@/components/AppLayout";
+import { useActivityTracker } from "@/hooks/useActivityTracker";
 import Dashboard from "./pages/Dashboard";
 import CareerNavigator from "./pages/CareerNavigator";
 import AdmissionPredictor from "./pages/AdmissionPredictor";
@@ -17,6 +18,8 @@ import AdminPanel from "./pages/AdminPanel";
 import SettingsPage from "./pages/SettingsPage";
 import Gamification from "./pages/Gamification";
 import SOPGenerator from "./pages/SOPGenerator";
+import Timeline from "./pages/Timeline";
+import AIContent from "./pages/AIContent";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
@@ -24,6 +27,7 @@ const queryClient = new QueryClient();
 
 function ProtectedRoutes() {
   const { user, loading } = useAuth();
+  useActivityTracker();
 
   if (loading) {
     return (
@@ -50,6 +54,8 @@ function ProtectedRoutes() {
         <Route path="/admin" element={<AdminPanel />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/sop" element={<SOPGenerator />} />
+        <Route path="/timeline" element={<Timeline />} />
+        <Route path="/ai-content" element={<AIContent />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </AppLayout>
