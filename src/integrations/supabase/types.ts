@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_generated_content: {
+        Row: {
+          content: string
+          content_type: string
+          country: string | null
+          created_at: string
+          id: string
+          title: string
+          topic: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content?: string
+          content_type?: string
+          country?: string | null
+          created_at?: string
+          id?: string
+          title?: string
+          topic?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          content_type?: string
+          country?: string | null
+          created_at?: string
+          id?: string
+          title?: string
+          topic?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       applications: {
         Row: {
           course: string | null
@@ -262,6 +298,42 @@ export type Database = {
         }
         Relationships: []
       }
+      recommendations: {
+        Row: {
+          created_at: string
+          description: string | null
+          dismissed: boolean
+          id: string
+          link: string | null
+          rec_type: string
+          score: number | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          dismissed?: boolean
+          id?: string
+          link?: string | null
+          rec_type?: string
+          score?: number | null
+          title: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          dismissed?: boolean
+          id?: string
+          link?: string | null
+          rec_type?: string
+          score?: number | null
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       sop_drafts: {
         Row: {
           content: string
@@ -346,6 +418,33 @@ export type Database = {
           tuition_max?: number | null
           tuition_min?: number | null
           website?: string | null
+        }
+        Relationships: []
+      }
+      user_activity: {
+        Row: {
+          activity_type: string
+          created_at: string
+          id: string
+          metadata: Json | null
+          page: string | null
+          user_id: string
+        }
+        Insert: {
+          activity_type: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          page?: string | null
+          user_id: string
+        }
+        Update: {
+          activity_type?: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          page?: string | null
+          user_id?: string
         }
         Relationships: []
       }
