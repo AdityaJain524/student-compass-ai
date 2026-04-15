@@ -20,6 +20,9 @@ import Gamification from "./pages/Gamification";
 import SOPGenerator from "./pages/SOPGenerator";
 import Timeline from "./pages/Timeline";
 import AIContent from "./pages/AIContent";
+import GrowthEngine from "./pages/GrowthEngine";
+import BusinessDashboard from "./pages/BusinessDashboard";
+import AIJourneyFlow from "./pages/AIJourneyFlow";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
@@ -56,6 +59,9 @@ function ProtectedRoutes() {
         <Route path="/sop" element={<SOPGenerator />} />
         <Route path="/timeline" element={<Timeline />} />
         <Route path="/ai-content" element={<AIContent />} />
+        <Route path="/growth-engine" element={<GrowthEngine />} />
+        <Route path="/business" element={<BusinessDashboard />} />
+        <Route path="/ai-flow" element={<AIJourneyFlow />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </AppLayout>
