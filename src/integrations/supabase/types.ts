@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_agent_logs: {
+        Row: {
+          action_type: string
+          created_at: string
+          id: string
+          message: string
+          metadata: Json | null
+          user_id: string
+        }
+        Insert: {
+          action_type: string
+          created_at?: string
+          id?: string
+          message: string
+          metadata?: Json | null
+          user_id: string
+        }
+        Update: {
+          action_type?: string
+          created_at?: string
+          id?: string
+          message?: string
+          metadata?: Json | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       ai_generated_content: {
         Row: {
           content: string
@@ -209,6 +236,63 @@ export type Database = {
           notes?: string | null
           status?: string
           tenure_months?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      marketing_campaigns: {
+        Row: {
+          country: string | null
+          created_at: string
+          email_content: string | null
+          goal: string
+          id: string
+          instagram_content: string | null
+          linkedin_content: string | null
+          simulated_clicks: number
+          simulated_conversions: number
+          simulated_opens: number
+          simulated_sent: number
+          status: string
+          target_audience: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          country?: string | null
+          created_at?: string
+          email_content?: string | null
+          goal?: string
+          id?: string
+          instagram_content?: string | null
+          linkedin_content?: string | null
+          simulated_clicks?: number
+          simulated_conversions?: number
+          simulated_opens?: number
+          simulated_sent?: number
+          status?: string
+          target_audience?: string
+          title?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          country?: string | null
+          created_at?: string
+          email_content?: string | null
+          goal?: string
+          id?: string
+          instagram_content?: string | null
+          linkedin_content?: string | null
+          simulated_clicks?: number
+          simulated_conversions?: number
+          simulated_opens?: number
+          simulated_sent?: number
+          status?: string
+          target_audience?: string
+          title?: string
           updated_at?: string
           user_id?: string
         }
