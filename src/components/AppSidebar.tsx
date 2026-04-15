@@ -14,6 +14,9 @@ import {
   PenTool,
   Calendar,
   Sparkles,
+  Rocket,
+  DollarSign,
+  Brain,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -44,6 +47,9 @@ const mainItems = [
   { title: "Loan Assistance", url: "/loans", icon: Banknote },
   { title: "Rewards", url: "/rewards", icon: Trophy },
   { title: "Notifications", url: "/notifications", icon: Bell },
+  { title: "Growth Engine", url: "/growth-engine", icon: Rocket },
+  { title: "Business", url: "/business", icon: DollarSign },
+  { title: "AI Journey", url: "/ai-flow", icon: Brain },
 ];
 
 const adminItems = [
